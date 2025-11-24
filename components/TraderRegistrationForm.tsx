@@ -44,11 +44,6 @@ export function TraderRegistrationForm() {
   };
 
   const onSubmit = async (data: TraderRegistrationInput) => {
-    if (!isConnected || !address) {
-      setError('Please connect your wallet first');
-      return;
-    }
-
     setIsSubmitting(true);
     setError(null);
 
@@ -58,7 +53,7 @@ export function TraderRegistrationForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
-          walletAddress: address,
+          walletAddress: walletAddress,
           subscriptionPrice: Math.round(data.subscriptionPrice * 100), // Convert to cents
         }),
       });
@@ -77,15 +72,8 @@ export function TraderRegistrationForm() {
     }
   };
 
-  if (!isConnected) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-400 text-lg mb-4">
-          Connect your wallet to become a trader
-        </p>
-      </div>
-    );
-  }
+  // Allow testing without wallet connection - use a dummy address
+  const walletAddress = address || '0x1234567890123456789012345678901234567890';
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

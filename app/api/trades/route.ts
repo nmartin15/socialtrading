@@ -1,0 +1,157 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { tradeSubmissionSchema } from '@/lib/validations/trade';
+import { z } from 'zod';
+
+// POST /api/trades - Submit a new trade
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    // Get wallet address from header (set by middleware)
+    const walletAddress = request.headers.get('x-wallet-address');
+    
+    if (!walletAddress) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please connect your wallet.' },
+        { status: 401 }
+      );
+    }
+
+    // Validate input
+    const validatedData = tradeSubmissionSchema.parse(body);
+
+    // Check if user exists and is a trader
+    const user = await prisma.user.findUnique({
+      where: { walletAddress },
+      include: { trader: true },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found. Please register first.' },
+        { status: 404 }
+      );
+    }
+
+    if (!user.trader) {
+      return NextResponse.json(
+        { error: 'Only traders can submit trades. Please register as a trader first.' },
+        { status: 403 }
+      );
+    }
+
+    // Check if transaction hash already exists
+    const existingTrade = await prisma.trade.findUnique({
+      where: { txHash: validatedData.txHash },
+    });
+
+    if (existingTrade) {
+      return NextResponse.json(
+        { error: 'This transaction has already been recorded.' },
+        { status: 409 }
+      );
+    }
+
+    // Create the trade
+    const trade = await prisma.trade.create({
+      data: {
+        traderId: user.trader.id,
+        tokenIn: validatedData.tokenIn,
+        tokenOut: validatedData.tokenOut,
+        amountIn: validatedData.amountIn,
+        amountOut: validatedData.amountOut,
+        txHash: validatedData.txHash,
+        usdValue: validatedData.usdValue || null,
+      },
+      include: {
+        trader: {
+          include: {
+            user: {
+              select: {
+                username: true,
+                walletAddress: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(
+      { 
+        message: 'Trade submitted successfully',
+        trade 
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      );
+    }
+
+    console.error('Error submitting trade:', error);
+    return NextResponse.json(
+      { error: 'Failed to submit trade. Please try again.' },
+      { status: 500 }
+    );
+  }
+}
+
+// GET /api/trades - Get trades (with optional filtering)
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const traderId = searchParams.get('traderId');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const offset = parseInt(searchParams.get('offset') || '0');
+
+    // Build query
+    const where = traderId ? { traderId } : {};
+
+    // Get trades with pagination
+    const [trades, totalCount] = await Promise.all([
+      prisma.trade.findMany({
+        where,
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+        skip: offset,
+        include: {
+          trader: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  walletAddress: true,
+                  avatarUrl: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.trade.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      trades,
+      pagination: {
+        total: totalCount,
+        limit,
+        offset,
+        hasMore: offset + limit < totalCount,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching trades:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch trades' },
+      { status: 500 }
+    );
+  }
+}
+

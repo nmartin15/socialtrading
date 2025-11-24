@@ -36,3 +36,8 @@ export function formatBigNumber(value: string, decimals = 18): string {
   return num.toString();
 }
 
+// Get blockchain explorer URL for transaction hash
+export function getExplorerUrl(txHash: string): string {
+  return `https://explorer-mainnet.codexnetwork.org/tx/${txHash}`;
+}
+

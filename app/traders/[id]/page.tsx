@@ -1,13 +1,13 @@
 import { ConnectButton } from '@/components/ConnectButton';
 import Link from 'next/link';
-import { formatCurrency, formatPercentage, formatAddress } from '@/lib/utils';
+import { formatCurrency, formatPercentage, formatAddress, getExplorerUrl } from '@/lib/utils';
 import { prisma } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 
 interface TraderProfilePageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 async function getTrader(id: string) {
@@ -48,11 +48,17 @@ async function getTrader(id: string) {
 }
 
 export default async function TraderProfilePage({ params }: TraderProfilePageProps) {
-  const trader = await getTrader(params.id);
+  const { id } = await params;
+  const trader = await getTrader(id);
 
   if (!trader) {
     notFound();
   }
+
+  // Parse trading styles from JSON string (SQLite stores as string)
+  const tradingStyles = typeof trader.tradingStyles === 'string' 
+    ? JSON.parse(trader.tradingStyles) 
+    : trader.tradingStyles;
 
   const allTimePerformance = trader.performance.find(
     (p) => p.period === 'ALL_TIME'
@@ -118,7 +124,7 @@ export default async function TraderProfilePage({ params }: TraderProfilePagePro
 
               {/* Trading Styles */}
               <div className="flex flex-wrap gap-2 mb-4">
-                {trader.tradingStyles.map((style) => (
+                {tradingStyles.map((style: string) => (
                   <span
                     key={style}
                     className="px-3 py-1 bg-gray-700 text-sm rounded-md"
@@ -129,22 +135,22 @@ export default async function TraderProfilePage({ params }: TraderProfilePagePro
               </div>
 
               {/* Quick Stats */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-6">
                 <div>
-                  <div className="text-gray-400 text-sm">Followers</div>
-                  <div className="text-2xl font-bold">{trader.totalFollowers}</div>
+                  <div className="text-gray-400 text-xs uppercase tracking-wider mb-2">Followers</div>
+                  <div className="text-4xl font-bold text-blue-500 leading-none">{trader.totalFollowers}</div>
                 </div>
                 <div>
-                  <div className="text-gray-400 text-sm">Active Copiers</div>
-                  <div className="text-2xl font-bold">{trader.activeCopiers}</div>
+                  <div className="text-gray-400 text-xs uppercase tracking-wider mb-2">Active Copiers</div>
+                  <div className="text-4xl font-bold text-purple-500 leading-none">{trader.activeCopiers}</div>
                 </div>
                 <div>
-                  <div className="text-gray-400 text-sm">Total Trades</div>
-                  <div className="text-2xl font-bold">{trader._count.trades}</div>
+                  <div className="text-gray-400 text-xs uppercase tracking-wider mb-2">Total Trades</div>
+                  <div className="text-4xl font-bold text-green-500 leading-none">{trader._count.trades}</div>
                 </div>
                 <div>
-                  <div className="text-gray-400 text-sm">Performance Fee</div>
-                  <div className="text-2xl font-bold">{trader.performanceFee}%</div>
+                  <div className="text-gray-400 text-xs uppercase tracking-wider mb-2">Performance Fee</div>
+                  <div className="text-4xl font-bold text-pink-500 leading-none">{trader.performanceFee}%</div>
                 </div>
               </div>
             </div>
@@ -243,6 +249,7 @@ export default async function TraderProfilePage({ params }: TraderProfilePagePro
                     <th className="pb-3">Amount Out</th>
                     <th className="pb-3">USD Value</th>
                     <th className="pb-3">Date</th>
+                    <th className="pb-3">Tx Hash</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -258,6 +265,29 @@ export default async function TraderProfilePage({ params }: TraderProfilePagePro
                       </td>
                       <td className="py-3 text-gray-400 text-sm">
                         {new Date(trade.timestamp).toLocaleDateString()}
+                      </td>
+                      <td className="py-3">
+                        <a
+                          href={getExplorerUrl(trade.txHash)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:text-blue-400 font-mono text-sm inline-flex items-center gap-1"
+                        >
+                          {formatAddress(trade.txHash)}
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
+                          </svg>
+                        </a>
                       </td>
                     </tr>
                   ))}
