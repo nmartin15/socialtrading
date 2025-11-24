@@ -27,10 +27,10 @@ export default function Home() {
 
           {/* Main Heading */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight">
-            Copy Trade the Best
+            Copy the Best Traders
             <br />
             <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient">
-              Codex Traders
+              on Codex Blockchain
             </span>
           </h1>
 
