@@ -28,15 +28,13 @@ export const traderRegistrationSchema = z.object({
 export type TraderRegistrationInput = z.infer<typeof traderRegistrationSchema>;
 
 export const TRADING_STYLES = [
-  'Day Trading',
   'Swing Trading',
-  'Scalping',
   'Position Trading',
-  'Arbitrage',
-  'High Frequency',
   'Momentum Trading',
   'Value Trading',
   'Growth Trading',
   'DeFi Farming',
+  'Trend Following',
+  'Dollar Cost Averaging',
 ] as const;
 
