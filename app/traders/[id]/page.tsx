@@ -1,4 +1,5 @@
 import { ConnectButton } from '@/components/ConnectButton';
+import { ProfileActions } from '@/components/ProfileActions';
 import Link from 'next/link';
 import { formatCurrency, formatPercentage, formatAddress, getExplorerUrl } from '@/lib/utils';
 import { prisma } from '@/lib/prisma';
@@ -155,21 +156,11 @@ export default async function TraderProfilePage({ params }: TraderProfilePagePro
               </div>
             </div>
 
-            {/* Subscribe Card */}
-            <div className="bg-gray-900 rounded-lg p-6 w-64 flex-shrink-0">
-              <div className="text-center mb-4">
-                <div className="text-gray-400 text-sm mb-1">Monthly Price</div>
-                <div className="text-3xl font-bold text-blue-500">
-                  {formatCurrency(trader.subscriptionPrice / 100)}
-                </div>
-              </div>
-              <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors mb-2">
-                Subscribe
-              </button>
-              <p className="text-xs text-gray-400 text-center">
-                Connect wallet to subscribe
-              </p>
-            </div>
+            {/* Action Card */}
+            <ProfileActions 
+              traderWalletAddress={trader.user.walletAddress}
+              subscriptionPrice={trader.subscriptionPrice}
+            />
           </div>
         </div>
 

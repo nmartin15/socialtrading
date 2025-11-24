@@ -32,6 +32,10 @@ export const tradeSubmissionSchema = z.object({
     .optional()
     .or(z.literal(0))
     .nullable(),
+  notes: z
+    .string()
+    .min(500, 'Trade notes must be at least 500 characters - explain your reasoning, strategy, and analysis')
+    .max(2000, 'Trade notes must be less than 2000 characters'),
 });
 
 export type TradeSubmissionInput = z.infer<typeof tradeSubmissionSchema>;

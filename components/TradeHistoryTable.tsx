@@ -12,6 +12,7 @@ interface Trade {
   txHash: string;
   timestamp: Date | string;
   usdValue: number | null;
+  notes: string;
 }
 
 interface TradeHistoryTableProps {

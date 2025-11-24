@@ -185,6 +185,30 @@ export function TradeSubmissionForm() {
         )}
       </div>
 
+      {/* Trade Notes (Required) */}
+      <div>
+        <label htmlFor="notes" className="block text-sm font-medium text-gray-300 mb-2">
+          Trade Notes <span className="text-red-500">*</span>
+          <span className="text-gray-500 text-xs ml-2">(Min 500 characters)</span>
+        </label>
+        <textarea
+          {...register('notes')}
+          id="notes"
+          rows={6}
+          placeholder="Explain your reasoning, strategy, and analysis for this trade. Include:&#10;• Why you entered this trade (market conditions, signals, setup)&#10;• Your price targets and risk management&#10;• Key indicators or patterns you're following&#10;• Expected outcome and timeframe&#10;&#10;This helps your followers understand your strategy and learn from your trades."
+          className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+          disabled={isSubmitting}
+        />
+        {errors.notes && (
+          <p className="mt-1 text-sm text-red-400">{errors.notes.message}</p>
+        )}
+        <p className="mt-1 text-xs text-gray-400">
+          {typeof window !== 'undefined' && document.getElementById('notes') 
+            ? `${(document.getElementById('notes') as HTMLTextAreaElement).value.length} / 500+ characters`
+            : '0 / 500+ characters'}
+        </p>
+      </div>
+
       {/* Submit Button */}
       <button
         type="submit"

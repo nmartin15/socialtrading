@@ -56,6 +56,7 @@ model Trade {
   txHash    String      @unique
   timestamp DateTime    @default(now())
   usdValue  Float?
+  notes     String      // trade reasoning/analysis (min 500 chars)
   
   // Relations
   trader    Trader      @relation(fields: [traderId], references: [id], onDelete: Cascade)

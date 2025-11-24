@@ -13,6 +13,7 @@ interface Trade {
   amountOut: string;
   txHash: string;
   usdValue: number | null;
+  notes: string;
 }
 
 interface TradeEditModalProps {
@@ -40,6 +41,7 @@ export function TradeEditModal({ trade, isOpen, onClose, onSuccess }: TradeEditM
       amountOut: trade.amountOut,
       txHash: trade.txHash,
       usdValue: trade.usdValue || undefined,
+      notes: trade.notes,
     },
   });
 
@@ -52,6 +54,7 @@ export function TradeEditModal({ trade, isOpen, onClose, onSuccess }: TradeEditM
       amountOut: trade.amountOut,
       txHash: trade.txHash,
       usdValue: trade.usdValue || undefined,
+      notes: trade.notes,
     });
   }, [trade, reset]);
 
@@ -216,6 +219,25 @@ export function TradeEditModal({ trade, isOpen, onClose, onSuccess }: TradeEditM
             />
             {errors.usdValue && (
               <p className="mt-1 text-sm text-red-400">{errors.usdValue.message}</p>
+            )}
+          </div>
+
+          {/* Trade Notes */}
+          <div>
+            <label htmlFor="edit-notes" className="block text-sm font-medium text-gray-300 mb-2">
+              Trade Notes <span className="text-red-500">*</span>
+              <span className="text-gray-500 text-xs ml-2">(Min 500 characters)</span>
+            </label>
+            <textarea
+              {...register('notes')}
+              id="edit-notes"
+              rows={6}
+              placeholder="Explain your reasoning, strategy, and analysis..."
+              className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+              disabled={isSubmitting}
+            />
+            {errors.notes && (
+              <p className="mt-1 text-sm text-red-400">{errors.notes.message}</p>
             )}
           </div>
 

@@ -25,6 +25,7 @@ export interface TradeData {
   txHash: string;
   timestamp: Date;
   usdValue?: number;
+  notes: string;
 }
 
 export interface PerformanceMetrics {

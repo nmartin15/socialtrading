@@ -55,7 +55,8 @@ export async function PUT(
     const body = await request.json();
 
     // Get wallet address from header
-    const walletAddress = request.headers.get('x-wallet-address');
+    // For testing without wallet connection, use dummy address
+    const walletAddress = request.headers.get('x-wallet-address') || '0x1234567890123456789012345678901234567890';
     
     if (!walletAddress) {
       return NextResponse.json(
@@ -118,6 +119,7 @@ export async function PUT(
         amountOut: validatedData.amountOut,
         txHash: validatedData.txHash,
         usdValue: validatedData.usdValue || null,
+        notes: validatedData.notes,
       },
       include: {
         trader: {
@@ -162,7 +164,8 @@ export async function DELETE(
     const { id } = await params;
 
     // Get wallet address from header
-    const walletAddress = request.headers.get('x-wallet-address');
+    // For testing without wallet connection, use dummy address
+    const walletAddress = request.headers.get('x-wallet-address') || '0x1234567890123456789012345678901234567890';
     
     if (!walletAddress) {
       return NextResponse.json(

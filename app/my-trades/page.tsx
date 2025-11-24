@@ -236,7 +236,7 @@ export default function MyTradesPage() {
                 <div className="space-y-3">
                   {trades.map((trade) => (
                     <div key={trade.id} className="bg-gray-900 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors">
-                      <div className="flex items-start gap-4">
+                      <div className="flex items-start gap-4 mb-3">
                         {/* Trade Info */}
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4">
                           {/* Token Pair */}
@@ -306,6 +306,14 @@ export default function MyTradesPage() {
                           >
                             Delete
                           </button>
+                        </div>
+                      </div>
+                      
+                      {/* Trade Notes */}
+                      <div className="pt-3 border-t border-gray-700">
+                        <div className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">📝 Trade Reasoning</div>
+                        <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                          {trade.notes}
                         </div>
                       </div>
                     </div>
