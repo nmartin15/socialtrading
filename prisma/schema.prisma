@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  walletAddress String         @unique
+  username      String?        @unique
+  role          String         @default("COPIER") // TRADER or COPIER
+  bio           String?
+  avatarUrl     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // Relations
+  trader        Trader?
+  subscriptions Subscription[]
+  copyTrades    CopyTrade[]
+  notifications Notification[]
+}
+
+model Trader {
+  id               String         @id @default(cuid())
+  userId           String         @unique
+  subscriptionPrice Int           @default(0) // in cents
+  performanceFee   Int            @default(0) // 0-20 percentage
+  tradingStyles    String         // JSON array of trading styles
+  verified         Boolean        @default(false)
+  totalFollowers   Int            @default(0)
+  activeCopiers    Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  
+  // Relations
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades           Trade[]
+  subscriptions    Subscription[]
+  performance      Performance[]
+}
+
+model Trade {
+  id        String      @id @default(cuid())
+  traderId  String
+  tokenIn   String
+  tokenOut  String
+  amountIn  String      // stored as string to handle large numbers
+  amountOut String      // stored as string to handle large numbers
+  txHash    String      @unique
+  timestamp DateTime    @default(now())
+  usdValue  Float?
+  
+  // Relations
+  trader    Trader      @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  copyTrades CopyTrade[]
+}
+
+model Subscription {
+  id           String             @id @default(cuid())
+  copierId     String
+  traderId     String
+  status       String             @default("ACTIVE") // ACTIVE, PAUSED, CANCELLED
+  monthlyPrice Int                // in cents
+  startDate    DateTime           @default(now())
+  endDate      DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  
+  // Relations
+  copier       User               @relation(fields: [copierId], references: [id], onDelete: Cascade)
+  trader       Trader             @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  
+  @@index([copierId])
+  @@index([traderId])
+}
+
+model CopyTrade {
+  id             String   @id @default(cuid())
+  originalTradeId String
+  copierId       String
+  amountCopied   String   // stored as string to handle large numbers
+  profitLoss     Float?
+  timestamp      DateTime @default(now())
+  
+  // Relations
+  originalTrade  Trade    @relation(fields: [originalTradeId], references: [id], onDelete: Cascade)
+  copier         User     @relation(fields: [copierId], references: [id], onDelete: Cascade)
+  
+  @@index([originalTradeId])
+  @@index([copierId])
+}
+
+model Performance {
+  id         String           @id @default(cuid())
+  traderId   String
+  period     String           // SEVEN_DAYS, THIRTY_DAYS, ALL_TIME
+  returnPct  Float            // percentage return
+  totalPnl   Float            // total profit/loss
+  updatedAt  DateTime         @updatedAt
+  
+  // Relations
+  trader     Trader           @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  
+  @@unique([traderId, period])
+  @@index([traderId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+// Note: SQLite doesn't support enums, so we use strings
+// Valid values:
+// - UserRole: "TRADER", "COPIER"
+// - SubscriptionStatus: "ACTIVE", "PAUSED", "CANCELLED"
+// - PerformancePeriod: "SEVEN_DAYS", "THIRTY_DAYS", "ALL_TIME"
