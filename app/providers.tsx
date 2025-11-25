@@ -17,7 +17,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
           createWeb3Modal({
             wagmiConfig: config,
             projectId,
-            chains: [codex],
             themeMode: 'dark',
           });
         });

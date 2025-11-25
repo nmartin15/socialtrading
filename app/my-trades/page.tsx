@@ -4,9 +4,13 @@ import { ConnectButton } from '@/components/ConnectButton';
 import { TradeHistoryTable, TradeHistoryTableSkeleton } from '@/components/TradeHistoryTable';
 import { TradeEditModal } from '@/components/TradeEditModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { Toast } from '@/components/Toast';
+import { EnhancedTradeNotes } from '@/components/EnhancedTradeNotes';
+import { TradeFilters } from '@/components/TradeFilters';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 
 interface Trade {
@@ -18,6 +22,7 @@ interface Trade {
   txHash: string;
   timestamp: Date | string;
   usdValue: number | null;
+  notes: string;
   trader: {
     id: string;
     user: {
@@ -37,18 +42,28 @@ export default function MyTradesPage() {
     username?: string;
     walletAddress: string;
   } | null>(null);
+  const [mounted, setMounted] = useState(false);
   
   // Edit/Delete state
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   const [deletingTradeId, setDeletingTradeId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // Toast state
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  // Search/Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  
+  // Toast hook
+  const { toast } = useToast();
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     async function fetchMyTrades() {
-      if (!isConnected || !address) {
+      if (!mounted || !isConnected || !address) {
         setIsLoading(false);
         return;
       }
@@ -58,7 +73,7 @@ export default function MyTradesPage() {
         setError(null);
 
         // First, get the current user and their trader info
-        const userResponse = await fetch('/api/users');
+        const userResponse = await fetch(`/api/users?walletAddress=${address}`);
         if (!userResponse.ok) {
           throw new Error('Failed to fetch user data');
         }
@@ -92,7 +107,7 @@ export default function MyTradesPage() {
     }
 
     fetchMyTrades();
-  }, [address, isConnected]);
+  }, [mounted, address, isConnected]);
 
   const handleDeleteTrade = async () => {
     if (!deletingTradeId) return;
@@ -101,6 +116,9 @@ export default function MyTradesPage() {
     try {
       const response = await fetch(`/api/trades/${deletingTradeId}`, {
         method: 'DELETE',
+        headers: {
+          'x-wallet-address': address || '',
+        },
       });
 
       if (!response.ok) {
@@ -110,12 +128,16 @@ export default function MyTradesPage() {
 
       // Remove trade from list
       setTrades(trades.filter(t => t.id !== deletingTradeId));
-      setToast({ message: 'Trade deleted successfully', type: 'success' });
+      toast({ 
+        title: 'Success',
+        description: 'Trade deleted successfully',
+      });
       setDeletingTradeId(null);
     } catch (err) {
-      setToast({ 
-        message: err instanceof Error ? err.message : 'Failed to delete trade', 
-        type: 'error' 
+      toast({ 
+        variant: 'destructive',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to delete trade',
       });
     } finally {
       setIsDeleting(false);
@@ -123,7 +145,10 @@ export default function MyTradesPage() {
   };
 
   const handleEditSuccess = () => {
-    setToast({ message: 'Trade updated successfully', type: 'success' });
+    toast({ 
+      title: 'Success',
+      description: 'Trade updated successfully',
+    });
     // Refresh trades list
     if (traderInfo) {
       fetch(`/api/trades?traderId=${traderInfo.id}`)
@@ -133,6 +158,127 @@ export default function MyTradesPage() {
     }
   };
 
+  // Extract all available tags from trades
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    
+    trades.forEach(trade => {
+      if (trade.notes) {
+        const lowerNotes = trade.notes.toLowerCase();
+        
+        if (lowerNotes.includes('long') || lowerNotes.includes('buy')) {
+          tagSet.add('📈 Long');
+        }
+        if (lowerNotes.includes('short') || lowerNotes.includes('sell')) {
+          tagSet.add('📉 Short');
+        }
+        if (lowerNotes.includes('entry') || lowerNotes.includes('entering') || lowerNotes.includes('opened')) {
+          tagSet.add('🎯 Entry');
+        }
+        if (lowerNotes.includes('exit') || lowerNotes.includes('closing') || lowerNotes.includes('closed')) {
+          tagSet.add('🚪 Exit');
+        }
+        if (lowerNotes.includes('breakout')) {
+          tagSet.add('Breakout');
+        }
+        if (lowerNotes.includes('swing')) {
+          tagSet.add('Swing Trade');
+        }
+        if (lowerNotes.includes('scalp')) {
+          tagSet.add('Scalp');
+        }
+        if (lowerNotes.includes('reversal')) {
+          tagSet.add('Reversal');
+        }
+      }
+    });
+    
+    return Array.from(tagSet);
+  }, [trades]);
+
+  // Filter trades based on search query and selected tags
+  const filteredTrades = useMemo(() => {
+    let filtered = trades;
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(trade => 
+        trade.tokenIn.toLowerCase().includes(query) ||
+        trade.tokenOut.toLowerCase().includes(query) ||
+        trade.txHash.toLowerCase().includes(query) ||
+        (trade.notes && trade.notes.toLowerCase().includes(query))
+      );
+    }
+
+    // Apply tag filters
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(trade => {
+        if (!trade.notes) return false;
+        const lowerNotes = trade.notes.toLowerCase();
+        
+        return selectedTags.every(tag => {
+          switch (tag) {
+            case '📈 Long':
+              return lowerNotes.includes('long') || lowerNotes.includes('buy');
+            case '📉 Short':
+              return lowerNotes.includes('short') || lowerNotes.includes('sell');
+            case '🎯 Entry':
+              return lowerNotes.includes('entry') || lowerNotes.includes('entering') || lowerNotes.includes('opened');
+            case '🚪 Exit':
+              return lowerNotes.includes('exit') || lowerNotes.includes('closing') || lowerNotes.includes('closed');
+            case 'Breakout':
+              return lowerNotes.includes('breakout');
+            case 'Swing Trade':
+              return lowerNotes.includes('swing');
+            case 'Scalp':
+              return lowerNotes.includes('scalp');
+            case 'Reversal':
+              return lowerNotes.includes('reversal');
+            default:
+              return true;
+          }
+        });
+      });
+    }
+
+    return filtered;
+  }, [trades, searchQuery, selectedTags]);
+
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  // Show loading state before mounted to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <main className="min-h-screen">
+        {/* Header */}
+        <header className="border-b border-gray-800">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <Link href="/" className="text-2xl font-bold">
+              🔮 DexMirror
+            </Link>
+            <ConnectButton />
+          </div>
+        </header>
+
+        <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="bg-gray-800 rounded-lg p-12 text-center">
+            <h2 className="text-2xl font-bold mb-4">Loading...</h2>
+            <p className="text-gray-400">
+              Please wait while we load your trades.
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   if (!isConnected) {
     return (
       <main className="min-h-screen">
@@ -140,7 +286,7 @@ export default function MyTradesPage() {
         <header className="border-b border-gray-800">
           <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <Link href="/" className="text-2xl font-bold">
-              Social Trading
+              🔮 DexMirror
             </Link>
             <ConnectButton />
           </div>
@@ -165,7 +311,7 @@ export default function MyTradesPage() {
       <header className="border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="text-2xl font-bold">
-            Social Trading
+            🔮 DexMirror
           </Link>
           <ConnectButton />
         </div>
@@ -177,15 +323,14 @@ export default function MyTradesPage() {
           <div>
             <h1 className="text-4xl font-bold mb-2">My Trades</h1>
             <p className="text-gray-400">
-              {isLoading ? 'Loading...' : `${trades.length} trade${trades.length !== 1 ? 's' : ''} recorded`}
+              {isLoading ? 'Loading...' : `${filteredTrades.length} trade${filteredTrades.length !== 1 ? 's' : ''} ${searchQuery || selectedTags.length > 0 ? 'found' : 'recorded'}`}
             </p>
           </div>
-          <Link
-            href="/submit-trade"
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
-          >
-            + Submit Trade
-          </Link>
+          <Button asChild>
+            <Link href="/submit-trade">
+              + Submit Trade
+            </Link>
+          </Button>
         </div>
 
         {/* Error State */}
@@ -205,139 +350,181 @@ export default function MyTradesPage() {
         {/* Stats Cards */}
         {!error && !isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <div className="text-gray-400 text-sm mb-2">Total Trades</div>
-              <div className="text-3xl font-bold text-blue-500">{trades.length}</div>
-            </div>
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <div className="text-gray-400 text-sm mb-2">Total Volume (USD)</div>
-              <div className="text-3xl font-bold text-green-500">
-                ${trades.reduce((sum, t) => sum + (t.usdValue || 0), 0).toLocaleString()}
-              </div>
-            </div>
-            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <div className="text-gray-400 text-sm mb-2">Unique Tokens</div>
-              <div className="text-3xl font-bold text-purple-500">
-                {new Set([...trades.map(t => t.tokenIn), ...trades.map(t => t.tokenOut)]).size}
-              </div>
-            </div>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Total Trades</CardDescription>
+                <CardTitle className="text-3xl text-blue-500">{trades.length}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Total Volume (USD)</CardDescription>
+                <CardTitle className="text-3xl text-green-500">
+                  ${trades.reduce((sum, t) => sum + (t.usdValue || 0), 0).toLocaleString()}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardDescription>Unique Tokens</CardDescription>
+                <CardTitle className="text-3xl text-purple-500">
+                  {new Set([...trades.map(t => t.tokenIn), ...trades.map(t => t.tokenOut)]).size}
+                </CardTitle>
+              </CardHeader>
+            </Card>
           </div>
         )}
 
         {/* Trades Table */}
-        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h2 className="text-xl font-semibold mb-6">Trade History</h2>
-          
-          {isLoading ? (
-            <TradeHistoryTableSkeleton />
-          ) : (
-            <div className="space-y-4">
-              {trades.length > 0 ? (
-                <div className="space-y-3">
-                  {trades.map((trade) => (
-                    <div key={trade.id} className="bg-gray-900 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors">
-                      <div className="flex items-start gap-4 mb-3">
-                        {/* Trade Info */}
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4">
-                          {/* Token Pair */}
-                          <div>
-                            <div className="text-xs text-gray-400 mb-1">Pair</div>
-                            <div className="font-mono text-sm">
-                              <span className="text-blue-400">{trade.tokenIn}</span>
-                              <span className="text-gray-500 mx-1">→</span>
-                              <span className="text-green-400">{trade.tokenOut}</span>
+        <Card>
+          <CardHeader>
+            <CardTitle>Trade History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <TradeHistoryTableSkeleton />
+            ) : (
+              <div className="space-y-4">
+                {trades.length > 0 && (
+                  <TradeFilters
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    selectedTags={selectedTags}
+                    onTagToggle={handleTagToggle}
+                    availableTags={availableTags}
+                    totalTrades={trades.length}
+                    filteredCount={filteredTrades.length}
+                  />
+                )}
+                
+                {filteredTrades.length > 0 ? (
+                  <div className="space-y-3">
+                    {filteredTrades.map((trade) => (
+                      <Card key={trade.id} className="hover:border-primary/50 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-4 mb-3">
+                            {/* Trade Info */}
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4">
+                              {/* Token Pair */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">Pair</div>
+                                <div className="font-mono text-sm">
+                                  <span className="text-blue-400">{trade.tokenIn}</span>
+                                  <span className="text-muted-foreground mx-1">→</span>
+                                  <span className="text-green-400">{trade.tokenOut}</span>
+                                </div>
+                              </div>
+
+                              {/* Amount In */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">Amount In</div>
+                                <div className="font-medium text-sm">
+                                  {trade.amountIn} <span className="text-muted-foreground">{trade.tokenIn}</span>
+                                </div>
+                              </div>
+
+                              {/* Amount Out */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">Amount Out</div>
+                                <div className="font-medium text-sm">
+                                  {trade.amountOut} <span className="text-muted-foreground">{trade.tokenOut}</span>
+                                </div>
+                              </div>
+
+                              {/* USD Value */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">USD Value</div>
+                                <div className="font-medium text-sm">
+                                  {trade.usdValue ? (
+                                    <span className="text-green-400">${trade.usdValue.toLocaleString()}</span>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Date */}
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-1">Date</div>
+                                <div className="text-sm">
+                                  {new Date(trade.timestamp).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2 flex-shrink-0">
+                              <Button
+                                onClick={() => setEditingTrade(trade)}
+                                size="sm"
+                                variant="default"
+                                title="Edit trade"
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                onClick={() => setDeletingTradeId(trade.id)}
+                                size="sm"
+                                variant="destructive"
+                                title="Delete trade"
+                              >
+                                Delete
+                              </Button>
                             </div>
                           </div>
-
-                          {/* Amount In */}
-                          <div>
-                            <div className="text-xs text-gray-400 mb-1">Amount In</div>
-                            <div className="font-medium text-sm">
-                              {trade.amountIn} <span className="text-gray-500">{trade.tokenIn}</span>
-                            </div>
-                          </div>
-
-                          {/* Amount Out */}
-                          <div>
-                            <div className="text-xs text-gray-400 mb-1">Amount Out</div>
-                            <div className="font-medium text-sm">
-                              {trade.amountOut} <span className="text-gray-500">{trade.tokenOut}</span>
-                            </div>
-                          </div>
-
-                          {/* USD Value */}
-                          <div>
-                            <div className="text-xs text-gray-400 mb-1">USD Value</div>
-                            <div className="font-medium text-sm">
-                              {trade.usdValue ? (
-                                <span className="text-green-400">${trade.usdValue.toLocaleString()}</span>
-                              ) : (
-                                <span className="text-gray-500">-</span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Date */}
-                          <div>
-                            <div className="text-xs text-gray-400 mb-1">Date</div>
-                            <div className="text-sm text-gray-300">
-                              {new Date(trade.timestamp).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-2 flex-shrink-0">
-                          <button
-                            onClick={() => setEditingTrade(trade)}
-                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors"
-                            title="Edit trade"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => setDeletingTradeId(trade.id)}
-                            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md transition-colors"
-                            title="Delete trade"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {/* Trade Notes */}
-                      <div className="pt-3 border-t border-gray-700">
-                        <div className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">📝 Trade Reasoning</div>
-                        <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
-                          {trade.notes}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <div className="text-lg mb-2">No trades yet</div>
-                  <p className="text-sm">Trades will appear here once you submit them.</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+                          
+                          {/* Enhanced Trade Notes */}
+                          {trade.notes && (
+                            <EnhancedTradeNotes
+                              notes={trade.notes}
+                              tokenIn={trade.tokenIn}
+                              tokenOut={trade.tokenOut}
+                              defaultExpanded={false}
+                            />
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : trades.length > 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <div className="text-lg mb-2">No trades match your filters</div>
+                    <p className="text-sm">Try adjusting your search or clearing filters.</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedTags([]);
+                      }}
+                      className="mt-4"
+                    >
+                      Clear All Filters
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <div className="text-lg mb-2">No trades yet</div>
+                    <p className="text-sm">Trades will appear here once you submit them.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Empty State Action */}
         {!isLoading && trades.length === 0 && !error && (
           <div className="text-center mt-8">
-            <Link
-              href="/submit-trade"
-              className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
-            >
-              Submit Your First Trade →
-            </Link>
+            <Button asChild size="lg">
+              <Link href="/submit-trade">
+                Submit Your First Trade →
+              </Link>
+            </Button>
           </div>
         )}
       </div>
@@ -364,15 +551,6 @@ export default function MyTradesPage() {
         isLoading={isDeleting}
         variant="danger"
       />
-
-      {/* Toast Notifications */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
     </main>
   );
 }

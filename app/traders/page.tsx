@@ -2,6 +2,7 @@
 
 import { ConnectButton } from '@/components/ConnectButton';
 import { TraderCard, TraderCardSkeleton } from '@/components/TraderCard';
+import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
@@ -65,7 +66,7 @@ export default function TradersPage() {
       <header className="border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="text-2xl font-bold">
-            Social Trading
+            🔮 DexMirror
           </Link>
           <ConnectButton />
         </div>
@@ -74,36 +75,27 @@ export default function TradersPage() {
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-4xl font-bold">Top Traders</h1>
-          <Link
-            href="/become-trader"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-          >
-            Become a Trader
-          </Link>
+          <Button asChild>
+            <Link href="/become-trader">
+              Become a Trader
+            </Link>
+          </Button>
         </div>
         
         {/* Filters */}
         <div className="flex gap-4 mb-8">
-          <button
+          <Button
             onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              filter === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-            }`}
+            variant={filter === 'all' ? 'default' : 'outline'}
           >
             All Traders
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setFilter('verified')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              filter === 'verified'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-            }`}
+            variant={filter === 'verified' ? 'default' : 'outline'}
           >
             Verified Only
-          </button>
+          </Button>
         </div>
 
         {/* Trader Grid */}
@@ -123,15 +115,14 @@ export default function TradersPage() {
           <div className="text-center py-20">
             <div className="text-6xl mb-4">📊</div>
             <h3 className="text-2xl font-bold mb-2">No Traders Yet</h3>
-            <p className="text-gray-400 mb-6">
+            <p className="text-muted-foreground mb-6">
               Be the first to join and start earning from your trades!
             </p>
-            <Link
-              href="/become-trader"
-              className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
-            >
-              Become a Trader
-            </Link>
+            <Button asChild size="lg">
+              <Link href="/become-trader">
+                Become a Trader
+              </Link>
+            </Button>
           </div>
         )}
       </div>

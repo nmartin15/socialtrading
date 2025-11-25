@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     
     if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Invalid input', details: validationResult.error.errors },
+        { error: 'Invalid input', details: validationResult.error.issues },
         { status: 400 }
       );
     }
@@ -25,9 +25,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user already exists
+    // Check if user already exists (always use lowercase for consistency)
+    const normalizedAddress = walletAddress.toLowerCase();
     let user = await prisma.user.findUnique({
-      where: { walletAddress },
+      where: { walletAddress: normalizedAddress },
       include: { trader: true },
     });
 
@@ -56,12 +57,13 @@ export async function POST(request: Request) {
     if (!user) {
       user = await prisma.user.create({
         data: {
-          walletAddress,
+          walletAddress: normalizedAddress,
           username,
           role: 'TRADER',
           bio,
           avatarUrl: avatarUrl || null,
         },
+        include: { trader: true },
       });
     } else {
       // Update existing user
@@ -73,6 +75,7 @@ export async function POST(request: Request) {
           bio,
           avatarUrl: avatarUrl || null,
         },
+        include: { trader: true },
       });
     }
 

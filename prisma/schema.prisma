@@ -77,6 +77,7 @@ model Subscription {
   // Relations
   copier       User               @relation(fields: [copierId], references: [id], onDelete: Cascade)
   trader       Trader             @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  copySettings CopySettings?
   
   @@index([copierId])
   @@index([traderId])
@@ -128,8 +129,31 @@ model Notification {
   @@index([userId])
 }
 
+model CopySettings {
+  id                String   @id @default(cuid())
+  subscriptionId    String   @unique
+  copyEnabled       Boolean  @default(true)
+  copyAmountType    String   @default("PERCENTAGE") // PERCENTAGE, FIXED, PROPORTIONAL
+  copyAmount        Float    @default(100) // percentage or fixed amount
+  maxTradeSize      Float?   // max amount per trade in USD
+  minTradeSize      Float?   // min amount per trade in USD
+  maxDailyLoss      Float?   // max daily loss in USD
+  stopLossPercent   Float?   // stop loss percentage
+  allowedTokens     String?  // JSON array of allowed tokens (null = all)
+  excludedTokens    String?  // JSON array of excluded tokens
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  
+  @@index([subscriptionId])
+}
+
 // Note: SQLite doesn't support enums, so we use strings
 // Valid values:
 // - UserRole: "TRADER", "COPIER"
 // - SubscriptionStatus: "ACTIVE", "PAUSED", "CANCELLED"
 // - PerformancePeriod: "SEVEN_DAYS", "THIRTY_DAYS", "ALL_TIME"
+// - CopyAmountType: "PERCENTAGE", "FIXED", "PROPORTIONAL"
+// - NotificationType: "NEW_TRADE", "SUBSCRIPTION_STARTED", "SUBSCRIPTION_ENDED", "TRADE_COPIED", "RISK_ALERT"

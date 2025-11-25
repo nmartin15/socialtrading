@@ -5,12 +5,18 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { tradeSubmissionSchema, type TradeSubmissionInput } from '@/lib/validations/trade';
 import { useRouter } from 'next/navigation';
+import { useAccount } from 'wagmi';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 
 export function TradeSubmissionForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
+  const { address } = useAccount();
 
   const {
     register,
@@ -23,14 +29,13 @@ export function TradeSubmissionForm() {
 
   const onSubmit = async (data: TradeSubmissionInput) => {
     setIsSubmitting(true);
-    setError(null);
-    setSuccess(false);
 
     try {
       const response = await fetch('/api/trades', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-wallet-address': address || '',
         },
         body: JSON.stringify({
           ...data,
@@ -44,7 +49,10 @@ export function TradeSubmissionForm() {
         throw new Error(result.error || 'Failed to submit trade');
       }
 
-      setSuccess(true);
+      toast({
+        title: 'Success!',
+        description: 'Trade submitted successfully. Redirecting...',
+      });
       reset();
       
       // Redirect to my trades page after 2 seconds
@@ -52,7 +60,11 @@ export function TradeSubmissionForm() {
         router.push('/my-trades');
       }, 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Something went wrong',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -60,116 +72,98 @@ export function TradeSubmissionForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* Success Message */}
-      {success && (
-        <div className="bg-green-900/50 border border-green-500 text-green-200 px-4 py-3 rounded-lg">
-          ✓ Trade submitted successfully! Redirecting...
-        </div>
-      )}
-
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-
       {/* Token In */}
-      <div>
-        <label htmlFor="tokenIn" className="block text-sm font-medium text-gray-300 mb-2">
-          Token In <span className="text-red-500">*</span>
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="tokenIn">
+          Token In <span className="text-destructive">*</span>
+        </Label>
+        <Input
           {...register('tokenIn')}
           id="tokenIn"
           type="text"
           placeholder="e.g., ETH, USDC, DEX"
-          className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={isSubmitting}
         />
         {errors.tokenIn && (
-          <p className="mt-1 text-sm text-red-400">{errors.tokenIn.message}</p>
+          <p className="text-sm text-destructive">{errors.tokenIn.message}</p>
         )}
       </div>
 
       {/* Token Out */}
-      <div>
-        <label htmlFor="tokenOut" className="block text-sm font-medium text-gray-300 mb-2">
-          Token Out <span className="text-red-500">*</span>
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="tokenOut">
+          Token Out <span className="text-destructive">*</span>
+        </Label>
+        <Input
           {...register('tokenOut')}
           id="tokenOut"
           type="text"
           placeholder="e.g., DAI, USDT, BTC"
-          className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={isSubmitting}
         />
         {errors.tokenOut && (
-          <p className="mt-1 text-sm text-red-400">{errors.tokenOut.message}</p>
+          <p className="text-sm text-destructive">{errors.tokenOut.message}</p>
         )}
       </div>
 
       {/* Amount In */}
-      <div>
-        <label htmlFor="amountIn" className="block text-sm font-medium text-gray-300 mb-2">
-          Amount In <span className="text-red-500">*</span>
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="amountIn">
+          Amount In <span className="text-destructive">*</span>
+        </Label>
+        <Input
           {...register('amountIn')}
           id="amountIn"
           type="text"
           placeholder="e.g., 1.5"
-          className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={isSubmitting}
         />
         {errors.amountIn && (
-          <p className="mt-1 text-sm text-red-400">{errors.amountIn.message}</p>
+          <p className="text-sm text-destructive">{errors.amountIn.message}</p>
         )}
       </div>
 
       {/* Amount Out */}
-      <div>
-        <label htmlFor="amountOut" className="block text-sm font-medium text-gray-300 mb-2">
-          Amount Out <span className="text-red-500">*</span>
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="amountOut">
+          Amount Out <span className="text-destructive">*</span>
+        </Label>
+        <Input
           {...register('amountOut')}
           id="amountOut"
           type="text"
           placeholder="e.g., 2500.75"
-          className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={isSubmitting}
         />
         {errors.amountOut && (
-          <p className="mt-1 text-sm text-red-400">{errors.amountOut.message}</p>
+          <p className="text-sm text-destructive">{errors.amountOut.message}</p>
         )}
       </div>
 
       {/* Transaction Hash */}
-      <div>
-        <label htmlFor="txHash" className="block text-sm font-medium text-gray-300 mb-2">
-          Transaction Hash <span className="text-red-500">*</span>
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="txHash">
+          Transaction Hash <span className="text-destructive">*</span>
+        </Label>
+        <Input
           {...register('txHash')}
           id="txHash"
           type="text"
           placeholder="0x..."
-          className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+          className="font-mono"
           disabled={isSubmitting}
         />
         {errors.txHash && (
-          <p className="mt-1 text-sm text-red-400">{errors.txHash.message}</p>
+          <p className="text-sm text-destructive">{errors.txHash.message}</p>
         )}
       </div>
 
       {/* USD Value (Optional) */}
-      <div>
-        <label htmlFor="usdValue" className="block text-sm font-medium text-gray-300 mb-2">
-          USD Value <span className="text-gray-500 text-xs">(Optional)</span>
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="usdValue">
+          USD Value <span className="text-muted-foreground text-xs">(Optional)</span>
+        </Label>
+        <Input
           {...register('usdValue', { 
             setValueAs: (v) => v === '' ? null : parseFloat(v)
           })}
@@ -177,32 +171,30 @@ export function TradeSubmissionForm() {
           type="number"
           step="0.01"
           placeholder="e.g., 1500.00"
-          className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={isSubmitting}
         />
         {errors.usdValue && (
-          <p className="mt-1 text-sm text-red-400">{errors.usdValue.message}</p>
+          <p className="text-sm text-destructive">{errors.usdValue.message}</p>
         )}
       </div>
 
       {/* Trade Notes (Required) */}
-      <div>
-        <label htmlFor="notes" className="block text-sm font-medium text-gray-300 mb-2">
-          Trade Notes <span className="text-red-500">*</span>
-          <span className="text-gray-500 text-xs ml-2">(Min 500 characters)</span>
-        </label>
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="notes">
+          Trade Notes <span className="text-destructive">*</span>
+          <span className="text-muted-foreground text-xs ml-2">(Min 100 characters)</span>
+        </Label>
+        <Textarea
           {...register('notes')}
           id="notes"
           rows={6}
           placeholder="Explain your reasoning, strategy, and analysis for this trade. Include:&#10;• Why you entered this trade (market conditions, signals, setup)&#10;• Your price targets and risk management&#10;• Key indicators or patterns you're following&#10;• Expected outcome and timeframe&#10;&#10;This helps your followers understand your strategy and learn from your trades."
-          className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
           disabled={isSubmitting}
         />
         {errors.notes && (
-          <p className="mt-1 text-sm text-red-400">{errors.notes.message}</p>
+          <p className="text-sm text-destructive">{errors.notes.message}</p>
         )}
-        <p className="mt-1 text-xs text-gray-400">
+        <p className="text-xs text-muted-foreground">
           {typeof window !== 'undefined' && document.getElementById('notes') 
             ? `${(document.getElementById('notes') as HTMLTextAreaElement).value.length} / 500+ characters`
             : '0 / 500+ characters'}
@@ -210,15 +202,16 @@ export function TradeSubmissionForm() {
       </div>
 
       {/* Submit Button */}
-      <button
+      <Button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+        className="w-full"
+        size="lg"
       >
         {isSubmitting ? 'Submitting...' : 'Submit Trade'}
-      </button>
+      </Button>
 
-      <p className="text-sm text-gray-400 text-center">
+      <p className="text-sm text-muted-foreground text-center">
         Make sure all information is accurate before submitting.
       </p>
     </form>

@@ -87,8 +87,8 @@ export async function PUT(
       );
     }
 
-    // Check if the user owns this trade
-    if (existingTrade.trader.user.walletAddress !== walletAddress) {
+    // Check if the user owns this trade (compare lowercase for consistency)
+    if (existingTrade.trader.user.walletAddress.toLowerCase() !== walletAddress.toLowerCase()) {
       return NextResponse.json(
         { error: 'You can only edit your own trades' },
         { status: 403 }
@@ -142,7 +142,7 @@ export async function PUT(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation failed', details: error.errors },
+        { error: 'Validation failed', details: error.issues },
         { status: 400 }
       );
     }
@@ -193,8 +193,8 @@ export async function DELETE(
       );
     }
 
-    // Check if the user owns this trade
-    if (trade.trader.user.walletAddress !== walletAddress) {
+    // Check if the user owns this trade (compare lowercase for consistency)
+    if (trade.trader.user.walletAddress.toLowerCase() !== walletAddress.toLowerCase()) {
       return NextResponse.json(
         { error: 'You can only delete your own trades' },
         { status: 403 }

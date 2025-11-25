@@ -1,9 +1,40 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// GET all users (example endpoint)
-export async function GET() {
+// GET user by wallet address (for current user) or all users
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const walletAddress = searchParams.get('walletAddress');
+
+    // If wallet address is provided, get specific user with trader info
+    if (walletAddress) {
+      const user = await prisma.user.findUnique({
+        where: { walletAddress: walletAddress.toLowerCase() },
+        select: {
+          id: true,
+          walletAddress: true,
+          username: true,
+          role: true,
+          trader: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json(user);
+    }
+
+    // Otherwise return all users (for admin purposes)
     const users = await prisma.user.findMany({
       select: {
         id: true,

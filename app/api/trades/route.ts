@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validatedData = tradeSubmissionSchema.parse(body);
 
-    // Check if user exists and is a trader
+    // Check if user exists and is a trader (always use lowercase for consistency)
     const user = await prisma.user.findUnique({
-      where: { walletAddress },
+      where: { walletAddress: walletAddress.toLowerCase() },
       include: { trader: true },
     });
 
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation failed', details: error.errors },
+        { error: 'Validation failed', details: error.issues },
         { status: 400 }
       );
     }

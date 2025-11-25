@@ -1,4 +1,4 @@
-import { ConnectButton } from '@/components/ConnectButton';
+import { Navigation } from '@/components/Navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,14 +7,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-background via-background to-black/50">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient">
-            Social Trading
-          </Link>
-          <ConnectButton />
-        </div>
-      </header>
+      <Navigation />
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32">
@@ -27,18 +20,18 @@ export default function Home() {
 
           {/* Main Heading */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight">
-            Copy the Best Traders
+            Mirror Elite Traders
             <br />
             <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient">
-              on Codex Blockchain
+              Earn Like a Pro
             </span>
           </h1>
 
           {/* Subtitle */}
           <p className="text-xl sm:text-2xl text-muted-foreground mb-12 leading-relaxed">
-            Follow and automatically copy trades from verified traders
+            Automatically replicate trades from verified professionals
             <br className="hidden sm:block" />
-            on the Codex blockchain
+            on Codex blockchain
           </p>
 
           {/* CTA Buttons */}
@@ -112,35 +105,68 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-gradient-to-br from-card to-card/50 p-8 rounded-2xl border border-border hover:border-primary/50 transition-all shadow-xl hover:shadow-primary/20 hover:-translate-y-1 glow-hover">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 border border-primary/20">
-                <span className="text-4xl">🔍</span>
+            {/* Step 1: Discover Traders */}
+            <Link href="/traders" className="group">
+              <div className="bg-gradient-to-br from-card to-card/50 p-8 rounded-2xl border border-border hover:border-primary/50 transition-all shadow-xl hover:shadow-primary/20 hover:-translate-y-1 glow-hover cursor-pointer h-full">
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 border border-primary/20 group-hover:bg-primary/20 group-hover:scale-110 transition-all">
+                  <span className="text-4xl">🔍</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors">
+                  1. Discover Traders
+                </h3>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Browse verified traders, view their performance history, trading strategies, and track records
+                </p>
+                <div className="flex items-center text-primary font-semibold text-sm group-hover:translate-x-2 transition-transform">
+                  Browse Traders
+                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
-              <h3 className="text-2xl font-bold mb-3">1. Discover Traders</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Browse verified traders, view their performance history, trading strategies, and track records
-              </p>
-            </div>
+            </Link>
 
-            <div className="bg-gradient-to-br from-card to-card/50 p-8 rounded-2xl border border-border hover:border-accent/50 transition-all shadow-xl hover:shadow-accent/20 hover:-translate-y-1 glow-hover">
-              <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mb-6 border border-accent/20">
-                <span className="text-4xl">🔗</span>
+            {/* Step 2: Connect & Subscribe */}
+            <Link href="/traders" className="group">
+              <div className="bg-gradient-to-br from-card to-card/50 p-8 rounded-2xl border border-border hover:border-accent/50 transition-all shadow-xl hover:shadow-accent/20 hover:-translate-y-1 glow-hover cursor-pointer h-full">
+                <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mb-6 border border-accent/20 group-hover:bg-accent/20 group-hover:scale-110 transition-all">
+                  <span className="text-4xl">🔗</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-3 group-hover:text-accent transition-colors">
+                  2. Connect & Subscribe
+                </h3>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Connect your wallet and subscribe to traders you want to copy. Set your own limits and preferences
+                </p>
+                <div className="flex items-center text-accent font-semibold text-sm group-hover:translate-x-2 transition-transform">
+                  Start Subscribing
+                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
-              <h3 className="text-2xl font-bold mb-3">2. Connect & Subscribe</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Connect your wallet and subscribe to traders you want to copy. Set your own limits and preferences
-              </p>
-            </div>
+            </Link>
 
-            <div className="bg-gradient-to-br from-card to-card/50 p-8 rounded-2xl border border-border hover:border-primary/50 transition-all shadow-xl hover:shadow-primary/20 hover:-translate-y-1 glow-hover">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 border border-primary/20">
-                <span className="text-4xl">📈</span>
+            {/* Step 3: Earn Automatically */}
+            <Link href="/become-trader" className="group">
+              <div className="bg-gradient-to-br from-card to-card/50 p-8 rounded-2xl border border-border hover:border-primary/50 transition-all shadow-xl hover:shadow-primary/20 hover:-translate-y-1 glow-hover cursor-pointer h-full">
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 border border-primary/20 group-hover:bg-primary/20 group-hover:scale-110 transition-all">
+                  <span className="text-4xl">📈</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-3 group-hover:text-primary transition-colors">
+                  3. Earn Automatically
+                </h3>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Share your trading strategies and earn rewards. Register as a verified trader and build your reputation
+                </p>
+                <div className="flex items-center text-primary font-semibold text-sm group-hover:translate-x-2 transition-transform">
+                  Become a Trader
+                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
-              <h3 className="text-2xl font-bold mb-3">3. Earn Automatically</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Your trades are automatically executed when the trader makes a move. Track your profits in real-time
-              </p>
-            </div>
+            </Link>
           </div>
         </div>
       </section>
@@ -148,7 +174,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-border py-12 bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-muted-foreground">
-          <p>© 2024 Social Trading Platform. Built on Codex Blockchain.</p>
+          <p>© 2024 DexMirror. Built on Codex Blockchain.</p>
         </div>
       </footer>
     </main>
