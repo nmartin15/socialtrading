@@ -29,10 +29,14 @@ interface Subscription {
   };
   copySettings: {
     copyEnabled: boolean;
-    copyAmountType: string;
+    copyAmountType: 'PERCENTAGE' | 'FIXED' | 'PROPORTIONAL';
     copyAmount: number;
     maxTradeSize: number | null;
     minTradeSize: number | null;
+    maxDailyLoss: number | null;
+    stopLossPercent: number | null;
+    allowedTokens: string | null;
+    excludedTokens: string | null;
   } | null;
 }
 
@@ -437,7 +441,7 @@ export default function MySubscriptionsPage() {
             selectedSubscription.trader.user.username ||
             formatAddress(selectedSubscription.trader.user.walletAddress)
           }
-          currentSettings={selectedSubscription.copySettings}
+          currentSettings={selectedSubscription.copySettings as any}
           onSettingsUpdated={fetchSubscriptions}
         />
       )}

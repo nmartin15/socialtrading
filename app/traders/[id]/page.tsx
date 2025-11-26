@@ -1,5 +1,7 @@
 import { ConnectButton } from '@/components/ConnectButton';
 import { ProfileActions } from '@/components/ProfileActions';
+import { ProfileViewTracker } from '@/components/ProfileViewTracker';
+import { EnhancedTradeNotes } from '@/components/EnhancedTradeNotes';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { formatCurrency, formatPercentage, formatAddress, getExplorerUrl } from '@/lib/utils';
@@ -32,6 +34,17 @@ async function getTrader(id: string) {
           take: 10,
           orderBy: {
             timestamp: 'desc',
+          },
+          select: {
+            id: true,
+            tokenIn: true,
+            tokenOut: true,
+            amountIn: true,
+            amountOut: true,
+            usdValue: true,
+            timestamp: true,
+            txHash: true,
+            notes: true,
           },
         },
         _count: {
@@ -74,6 +87,9 @@ export default async function TraderProfilePage({ params }: TraderProfilePagePro
 
   return (
     <main className="min-h-screen">
+      {/* Profile View Tracker */}
+      <ProfileViewTracker traderId={id} />
+      
       {/* Header */}
       <header className="border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -253,59 +269,91 @@ export default async function TraderProfilePage({ params }: TraderProfilePagePro
         <div className="bg-gray-800 rounded-lg p-6">
           <h3 className="text-xl font-semibold mb-4">Recent Trades</h3>
           {trader.trades.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-gray-400 border-b border-gray-700">
-                    <th className="pb-3">Pair</th>
-                    <th className="pb-3">Amount In</th>
-                    <th className="pb-3">Amount Out</th>
-                    <th className="pb-3">USD Value</th>
-                    <th className="pb-3">Date</th>
-                    <th className="pb-3">Tx Hash</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trader.trades.map((trade) => (
-                    <tr key={trade.id} className="border-b border-gray-700 last:border-0">
-                      <td className="py-3 font-mono text-sm">
-                        {trade.tokenIn} → {trade.tokenOut}
-                      </td>
-                      <td className="py-3">{trade.amountIn}</td>
-                      <td className="py-3">{trade.amountOut}</td>
-                      <td className="py-3">
+            <div className="space-y-4">
+              {trader.trades.map((trade) => (
+                <div key={trade.id} className="border border-border rounded-lg p-4 hover:border-primary/50 transition-colors bg-card">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-3">
+                    {/* Token Pair */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Pair</div>
+                      <div className="font-mono text-sm">
+                        <span className="text-blue-400 font-semibold">{trade.tokenIn}</span>
+                        <span className="text-muted-foreground mx-1">→</span>
+                        <span className="text-green-400 font-semibold">{trade.tokenOut}</span>
+                      </div>
+                    </div>
+
+                    {/* Amount In */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Amount In</div>
+                      <div className="font-medium text-sm">
+                        {trade.amountIn}
+                        <span className="text-muted-foreground text-xs ml-1">{trade.tokenIn}</span>
+                      </div>
+                    </div>
+
+                    {/* Amount Out */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Amount Out</div>
+                      <div className="font-medium text-sm">
+                        {trade.amountOut}
+                        <span className="text-muted-foreground text-xs ml-1">{trade.tokenOut}</span>
+                      </div>
+                    </div>
+
+                    {/* USD Value */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">USD Value</div>
+                      <div className="font-semibold text-sm text-green-400">
                         {trade.usdValue ? formatCurrency(trade.usdValue) : '-'}
-                      </td>
-                      <td className="py-3 text-gray-400 text-sm">
-                        {new Date(trade.timestamp).toLocaleDateString()}
-                      </td>
-                      <td className="py-3">
-                        <a
-                          href={getExplorerUrl(trade.txHash)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:text-blue-400 font-mono text-sm inline-flex items-center gap-1"
+                      </div>
+                    </div>
+
+                    {/* Date & Tx Hash */}
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Date</div>
+                      <div className="text-sm text-muted-foreground mb-1">
+                        {new Date(trade.timestamp).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </div>
+                      <a
+                        href={getExplorerUrl(trade.txHash)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:text-blue-400 font-mono text-xs inline-flex items-center gap-1 transition-colors"
+                      >
+                        {formatAddress(trade.txHash)}
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          {formatAddress(trade.txHash)}
-                          <svg
-                            className="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                            />
-                          </svg>
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Enhanced Trade Notes */}
+                  {trade.notes && (
+                    <EnhancedTradeNotes
+                      notes={trade.notes}
+                      tokenIn={trade.tokenIn}
+                      tokenOut={trade.tokenOut}
+                      defaultExpanded={false}
+                    />
+                  )}
+                </div>
+              ))}
             </div>
           ) : (
             <div className="text-center py-12 text-gray-500">

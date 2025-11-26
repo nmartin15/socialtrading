@@ -32,19 +32,50 @@ interface TokenPairDataPoint {
   count: number;
 }
 
+interface SubscriberGrowthPoint {
+  date: string;
+  count: number;
+  newSubscribers: number;
+}
+
+interface ViewsDataPoint {
+  date: string;
+  count: number;
+}
+
+interface MonthlyStatDataPoint {
+  month: string;
+  trades: number;
+  pnl: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+}
+
 interface ChartsData {
   pnlOverTime: PnLDataPoint[];
   tradingFrequency: FrequencyDataPoint[];
   topTokenPairs: TokenPairDataPoint[];
+  monthlyStats: MonthlyStatDataPoint[];
+}
+
+interface SubscribersData {
+  growth: SubscriberGrowthPoint[];
+}
+
+interface ProfileMetrics {
+  viewsOverTime: ViewsDataPoint[];
 }
 
 interface AnalyticsChartsProps {
   charts: ChartsData;
+  subscribers?: SubscribersData;
+  profileMetrics?: ProfileMetrics;
 }
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b'];
 
-export function AnalyticsCharts({ charts }: AnalyticsChartsProps) {
+export function AnalyticsCharts({ charts, subscribers, profileMetrics }: AnalyticsChartsProps) {
   // Format P&L data for the chart
   const pnlData = charts.pnlOverTime.map((point) => ({
     date: new Date(point.date).toLocaleDateString('en-US', {
@@ -70,8 +101,117 @@ export function AnalyticsCharts({ charts }: AnalyticsChartsProps) {
     color: COLORS[index % COLORS.length],
   }));
 
+  // Format subscriber growth data
+  const subscriberGrowthData = subscribers?.growth?.map((point) => ({
+    date: new Date(point.date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    }),
+    subscribers: point.count,
+    newSubscribers: point.newSubscribers,
+  })) || [];
+
+  // Format profile views data
+  const profileViewsData = profileMetrics?.viewsOverTime?.map((point) => ({
+    date: new Date(point.date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    }),
+    views: point.count,
+  })) || [];
+
+  // Format monthly stats
+  const monthlyData = charts.monthlyStats?.map((stat) => ({
+    month: stat.month,
+    trades: stat.trades,
+    pnl: Math.round(stat.pnl * 100) / 100,
+    winRate: Math.round(stat.winRate * 10) / 10,
+  })) || [];
+
   return (
     <div className="space-y-8">
+      {/* Subscriber Growth Chart */}
+      {subscribers && subscriberGrowthData.length > 0 && (
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-6">Subscriber Growth</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={subscriberGrowthData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis
+                dataKey="date"
+                stroke="#9ca3af"
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis
+                stroke="#9ca3af"
+                style={{ fontSize: '12px' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1f2937',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                }}
+                labelStyle={{ color: '#f3f4f6' }}
+              />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="subscribers"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={{ fill: '#3b82f6', r: 4 }}
+                activeDot={{ r: 6 }}
+                name="Total Subscribers"
+              />
+              <Line
+                type="monotone"
+                dataKey="newSubscribers"
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                dot={{ fill: '#8b5cf6', r: 4 }}
+                activeDot={{ r: 6 }}
+                name="New Subscribers"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Profile Views Chart */}
+      {profileMetrics && profileViewsData.length > 0 && (
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-6">Profile Views Over Time</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={profileViewsData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis
+                dataKey="date"
+                stroke="#9ca3af"
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1f2937',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                }}
+                labelStyle={{ color: '#f3f4f6' }}
+                formatter={(value: number) => [value, 'Views']}
+              />
+              <Legend />
+              <Bar
+                dataKey="views"
+                fill="#ec4899"
+                radius={[8, 8, 0, 0]}
+                name="Profile Views"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       {/* P&L Over Time Chart */}
       <div className="bg-gray-800 rounded-lg p-6">
         <h3 className="text-xl font-semibold mb-6">Cumulative P&L Over Time</h3>
@@ -228,6 +368,90 @@ export function AnalyticsCharts({ charts }: AnalyticsChartsProps) {
           )}
         </div>
       </div>
+
+      {/* Monthly Performance Chart */}
+      {monthlyData.length > 0 && (
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-6">Monthly Performance</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis
+                dataKey="month"
+                stroke="#9ca3af"
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis
+                stroke="#9ca3af"
+                style={{ fontSize: '12px' }}
+                tickFormatter={(value) => `$${value}`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1f2937',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                }}
+                labelStyle={{ color: '#f3f4f6' }}
+                formatter={(value: number, name: string) => {
+                  if (name === 'pnl') return [`$${value.toFixed(2)}`, 'P&L'];
+                  if (name === 'trades') return [value, 'Trades'];
+                  if (name === 'winRate') return [`${value.toFixed(1)}%`, 'Win Rate'];
+                  return [value, name];
+                }}
+              />
+              <Legend />
+              <Bar
+                dataKey="pnl"
+                fill="#10b981"
+                radius={[8, 8, 0, 0]}
+                name="Monthly P&L"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Monthly Win Rate Chart */}
+      {monthlyData.length > 0 && (
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-6">Monthly Win Rate Trend</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis
+                dataKey="month"
+                stroke="#9ca3af"
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis
+                stroke="#9ca3af"
+                style={{ fontSize: '12px' }}
+                tickFormatter={(value) => `${value}%`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1f2937',
+                  border: '1px solid #374151',
+                  borderRadius: '8px',
+                }}
+                labelStyle={{ color: '#f3f4f6' }}
+                formatter={(value: number) => [`${value.toFixed(1)}%`, 'Win Rate']}
+              />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="winRate"
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                dot={{ fill: '#8b5cf6', r: 4 }}
+                activeDot={{ r: 6 }}
+                name="Win Rate"
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Win/Loss Distribution */}
       <div className="bg-gray-800 rounded-lg p-6">

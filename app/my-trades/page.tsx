@@ -52,6 +52,8 @@ export default function MyTradesPage() {
   // Search/Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  const [sortBy, setSortBy] = useState<'date' | 'value' | 'token'>('date');
   
   // Toast hook
   const { toast } = useToast();
@@ -196,7 +198,7 @@ export default function MyTradesPage() {
     return Array.from(tagSet);
   }, [trades]);
 
-  // Filter trades based on search query and selected tags
+  // Filter and sort trades based on search query, selected tags, date range, and sort order
   const filteredTrades = useMemo(() => {
     let filtered = trades;
 
@@ -220,13 +222,13 @@ export default function MyTradesPage() {
         return selectedTags.every(tag => {
           switch (tag) {
             case '📈 Long':
-              return lowerNotes.includes('long') || lowerNotes.includes('buy');
+              return lowerNotes.match(/\b(long|buy|bought|accumulate|bullish)\b/);
             case '📉 Short':
-              return lowerNotes.includes('short') || lowerNotes.includes('sell');
+              return lowerNotes.match(/\b(short|sell|sold|bearish)\b/);
             case '🎯 Entry':
-              return lowerNotes.includes('entry') || lowerNotes.includes('entering') || lowerNotes.includes('opened');
+              return lowerNotes.match(/\b(entry|entering|entered|opened|opening)\b/);
             case '🚪 Exit':
-              return lowerNotes.includes('exit') || lowerNotes.includes('closing') || lowerNotes.includes('closed');
+              return lowerNotes.match(/\b(exit|exiting|exited|closing|closed)\b/);
             case 'Breakout':
               return lowerNotes.includes('breakout');
             case 'Swing Trade':
@@ -242,8 +244,39 @@ export default function MyTradesPage() {
       });
     }
 
-    return filtered;
-  }, [trades, searchQuery, selectedTags]);
+    // Apply date range filter
+    if (dateRange.start || dateRange.end) {
+      filtered = filtered.filter(trade => {
+        const tradeDate = new Date(trade.timestamp);
+        const startDate = dateRange.start ? new Date(dateRange.start) : null;
+        const endDate = dateRange.end ? new Date(dateRange.end) : null;
+        
+        if (startDate && tradeDate < startDate) return false;
+        if (endDate) {
+          // Set end date to end of day
+          endDate.setHours(23, 59, 59, 999);
+          if (tradeDate > endDate) return false;
+        }
+        return true;
+      });
+    }
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'date':
+          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        case 'value':
+          return (b.usdValue || 0) - (a.usdValue || 0);
+        case 'token':
+          return a.tokenIn.localeCompare(b.tokenIn);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [trades, searchQuery, selectedTags, dateRange, sortBy]);
 
   const handleTagToggle = (tag: string) => {
     setSelectedTags(prev => 
@@ -394,6 +427,10 @@ export default function MyTradesPage() {
                     availableTags={availableTags}
                     totalTrades={trades.length}
                     filteredCount={filteredTrades.length}
+                    dateRange={dateRange}
+                    onDateRangeChange={setDateRange}
+                    sortBy={sortBy}
+                    onSortChange={setSortBy}
                   />
                 )}
                 

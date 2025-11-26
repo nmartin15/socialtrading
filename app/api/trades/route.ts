@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { tradeSubmissionSchema } from '@/lib/validations/trade';
+import { copyTradeToSubscribers, notifyCopiers } from '@/lib/copyTradeService';
 import { z } from 'zod';
 
 // POST /api/trades - Submit a new trade
@@ -78,6 +79,29 @@ export async function POST(request: NextRequest) {
           },
         },
       },
+    });
+
+    // 🔄 Copy Trading: Copy this trade to all active subscribers
+    const traderName = user.username || user.walletAddress;
+    const tradeMessage = `${traderName} made a new trade: ${validatedData.tokenIn} → ${validatedData.tokenOut}`;
+    
+    // Run copy trading in the background (don't await to avoid slowing down response)
+    copyTradeToSubscribers(trade).then((result) => {
+      console.log(`Trade ${trade.id} copy results:`, result);
+      if (result.copiedCount > 0) {
+        console.log(`✅ Successfully copied trade to ${result.copiedCount} copiers`);
+      }
+      if (result.skippedCount > 0) {
+        console.log(`⏭️  Skipped ${result.skippedCount} copiers`);
+      }
+      if (result.errors.length > 0) {
+        console.error(`❌ Errors during copy:`, result.errors);
+      }
+    });
+
+    // 🔔 Notify all copiers about the new trade
+    notifyCopiers(user.trader.id, tradeMessage).catch((error) => {
+      console.error('Error notifying copiers:', error);
     });
 
     return NextResponse.json(

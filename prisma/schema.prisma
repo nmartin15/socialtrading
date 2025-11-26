@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -36,6 +36,7 @@ model Trader {
   verified         Boolean        @default(false)
   totalFollowers   Int            @default(0)
   activeCopiers    Int            @default(0)
+  profileViews     Int            @default(0) // total profile views
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   
@@ -44,23 +45,26 @@ model Trader {
   trades           Trade[]
   subscriptions    Subscription[]
   performance      Performance[]
+  profileViewHistory ProfileView[]
 }
 
 model Trade {
-  id        String      @id @default(cuid())
-  traderId  String
-  tokenIn   String
-  tokenOut  String
-  amountIn  String      // stored as string to handle large numbers
-  amountOut String      // stored as string to handle large numbers
-  txHash    String      @unique
-  timestamp DateTime    @default(now())
-  usdValue  Float?
-  notes     String      // trade reasoning/analysis (min 500 chars)
+  id          String      @id @default(cuid())
+  traderId    String
+  tokenIn     String
+  tokenOut    String
+  amountIn    String      // stored as string to handle large numbers
+  amountOut   String      // stored as string to handle large numbers
+  txHash      String      @unique
+  timestamp   DateTime    @default(now())
+  usdValue    Float?
+  notes       String      // trade reasoning/analysis (min 500 chars)
+  verified    Boolean     @default(false) // true if imported from blockchain
+  blockNumber String?     // blockchain block number for verified trades
   
   // Relations
-  trader    Trader      @relation(fields: [traderId], references: [id], onDelete: Cascade)
-  copyTrades CopyTrade[]
+  trader      Trader      @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  copyTrades  CopyTrade[]
 }
 
 model Subscription {
@@ -105,6 +109,7 @@ model Performance {
   period     String           // SEVEN_DAYS, THIRTY_DAYS, ALL_TIME
   returnPct  Float            // percentage return
   totalPnl   Float            // total profit/loss
+  winRate    Float?           // win rate percentage (0-100)
   updatedAt  DateTime         @updatedAt
   
   // Relations
@@ -148,6 +153,19 @@ model CopySettings {
   subscription      Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   
   @@index([subscriptionId])
+}
+
+model ProfileView {
+  id        String   @id @default(cuid())
+  traderId  String
+  viewedAt  DateTime @default(now())
+  viewerIp  String?  // optional IP tracking for unique views
+  
+  // Relations
+  trader    Trader   @relation(fields: [traderId], references: [id], onDelete: Cascade)
+  
+  @@index([traderId])
+  @@index([viewedAt])
 }
 
 // Note: SQLite doesn't support enums, so we use strings

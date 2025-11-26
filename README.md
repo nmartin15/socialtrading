@@ -12,13 +12,24 @@ A social trading platform built on the Codex blockchain (EVM-compatible) that al
 - **Charts**: Recharts
 - **Icons**: Lucide React
 
+## 🔐 Security Notice
+
+**IMPORTANT:** Critical security features have been implemented. Before running the app, you must:
+
+1. Set up a PostgreSQL database (SQLite is no longer supported)
+2. Generate a secure JWT_SECRET (min 32 characters)
+3. Configure all required environment variables
+
+See **[SECURITY_FIXES_COMPLETE.md](./SECURITY_FIXES_COMPLETE.md)** for setup instructions.
+
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 20.11.1 or higher
-- PostgreSQL database
+- **PostgreSQL database** (required - SQLite no longer supported)
 - WalletConnect Project ID (get from https://cloud.walletconnect.com)
+- JWT Secret (generate with: `openssl rand -hex 32`)
 
 ### Installation
 
@@ -35,20 +46,32 @@ npm install
 cp env.example .env
 
 # Edit .env with your actual values
+# REQUIRED:
+# - DATABASE_URL (PostgreSQL connection string)
+# - JWT_SECRET (generate: openssl rand -hex 32)
+# - NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
 ```
 
-3. Set up the database:
+⚠️ **Security Alert:** The app will not start without proper environment configuration.
+
+3. Set up the PostgreSQL database:
 
 ```bash
+# First, create a PostgreSQL database
+# Option 1: Use cloud provider (Neon, Supabase, Railway - all have free tiers)
+# Option 2: Local PostgreSQL: createdb dexmirror
+
 # Generate Prisma Client
 npm run prisma:generate
 
-# Create the database schema (if database exists)
-npm run prisma:push
+# Run migrations (RECOMMENDED for production)
+npm run prisma:migrate dev --name init
 
-# Or run migrations
-npm run prisma:migrate
+# Seed demo data (optional)
+npm run prisma:seed
 ```
+
+**Note:** `prisma db push` is no longer recommended. Use migrations for data safety.
 
 4. Run the development server:
 
@@ -58,17 +81,57 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Key Features
+
+### 📊 Advanced Analytics Dashboard
+- **Performance Metrics**: Win rate, profit factor, max drawdown
+- **Streak Tracking**: Longest win/loss streaks  
+- **Time Analysis**: 7-day, 30-day, and all-time performance
+- **Visual Charts**: P&L trends, trading frequency, token pairs
+- **Monthly Breakdown**: Performance and win rate by month
+- **Trade Highlights**: Best and worst trades
+
+See [ANALYTICS_IMPLEMENTATION_COMPLETE.md](./ANALYTICS_IMPLEMENTATION_COMPLETE.md) for details.
+
+### 🎯 Trading Features
+- Submit trades with detailed analysis
+- Automated blockchain trade import
+- Trade verification badges
+- Edit/delete trade functionality
+- Rich text trade notes
+
+### 👥 Social Features
+- Follow and copy top traders
+- Real-time notifications
+- Trader discovery with filters
+- Performance-based rankings
+- Profile views tracking
+
+### 🔒 Risk Management
+- Customizable copy settings
+- Trade size limits
+- Stop-loss configuration
+- Token allowlists/blocklists
+- Maximum daily loss limits
+
 ## Project Structure
 
 ```
 ├── app/                    # Next.js app directory
+│   ├── analytics/         # Analytics dashboard pages
 │   ├── api/               # API routes
+│   ├── traders/           # Trader profile pages
 │   ├── layout.tsx         # Root layout
 │   ├── page.tsx           # Home page
 │   └── globals.css        # Global styles
+├── components/            # React components
+│   ├── AnalyticsCharts.tsx   # Chart visualizations
+│   ├── TraderCard.tsx        # Trader list cards
+│   └── ui/                   # UI components
 ├── lib/                   # Utility libraries
 │   ├── prisma.ts         # Prisma client singleton
 │   ├── wagmi.ts          # Wagmi Web3 configuration
+│   ├── tradeScanner.ts   # Blockchain trade scanner
 │   └── types.ts          # TypeScript type definitions
 ├── prisma/               # Prisma schema and migrations
 │   └── schema.prisma     # Database schema
@@ -133,29 +196,43 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - [ ] Mobile application
 - [ ] Advanced analytics and reporting
 
-## 🔄 Copy Trading Feature
+## 🔄 Copy Trading Feature ✨ NEW!
 
-A complete copy trading system is now available! Users can:
+A complete copy trading system with automatic trade execution! Users can:
 
-- Subscribe to traders with custom copy settings
-- Configure risk management (max trade size, daily loss limits, stop loss)
-- Choose copy strategies (percentage, fixed amount, proportional)
-- Filter tokens (whitelist/blacklist)
-- Manage subscriptions (pause/resume/cancel)
-- Receive real-time notifications
+- **Subscribe to traders** with flexible payment options (Free Demo, Crypto, Card)
+- **Automatic trade copying** - Trades are copied instantly to all active subscribers
+- **Risk management** - Max trade size, daily loss limits, stop loss, token filters
+- **Copy strategies** - Percentage, fixed amount, or proportional copying
+- **Token filters** - Whitelist/blacklist specific tokens
+- **Subscription management** - Pause/resume/cancel anytime
+- **Real-time notifications** - Get notified of new trades and copy confirmations
+
+### 🚀 What's New (Nov 26, 2025)
+
+- ✅ **Automatic Trade Copying** - When traders submit trades, they're automatically copied to subscribers
+- ✅ **Enhanced Payment Flow** - Choose from Free Demo, Crypto, or Card payment methods
+- ✅ **Risk Validation** - Comprehensive checks before copying each trade
+- ✅ **Notification System** - Real-time alerts for trades, copies, and risk limits
+- ✅ **Copy Trade Service** - Dedicated service layer for trade copying logic
 
 ### Quick Start
 
 ```bash
-# Apply the new database schema
+# Apply the new database schema (if not already done)
 npx prisma db push
 
 # Start the development server
 npm run dev
+
+# Test the complete flow
+# See COPY_TRADING_TESTING_GUIDE.md for detailed test scenarios
 ```
 
 ### Documentation
 
+- **Testing Guide**: [COPY_TRADING_TESTING_GUIDE.md](./COPY_TRADING_TESTING_GUIDE.md) 🆕
+- **Feature Complete**: [COPY_TRADING_FEATURE_COMPLETE.md](./COPY_TRADING_FEATURE_COMPLETE.md) 🆕
 - **Quick Start**: [COPY_TRADING_QUICKSTART.md](./COPY_TRADING_QUICKSTART.md)
 - **User Guide**: [COPY_TRADING_GUIDE.md](./COPY_TRADING_GUIDE.md)
 - **Implementation**: [COPY_TRADING_IMPLEMENTATION.md](./COPY_TRADING_IMPLEMENTATION.md)

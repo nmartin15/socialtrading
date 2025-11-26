@@ -2,6 +2,7 @@
 
 import { ConnectButton } from '@/components/ConnectButton';
 import { TraderCard, TraderCardSkeleton } from '@/components/TraderCard';
+import { TraderDiscoveryFilters } from '@/components/TraderDiscoveryFilters';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
@@ -14,6 +15,9 @@ type Trader = {
   verified: boolean;
   totalFollowers: number;
   activeCopiers: number;
+  isHot?: boolean;
+  isTrending?: boolean;
+  winRate?: number;
   user: {
     id: string;
     walletAddress: string;
@@ -32,21 +36,48 @@ type Trader = {
   };
 };
 
+interface FilterState {
+  search: string;
+  sortBy: string;
+  verified: boolean | null;
+  styles: string[];
+  minPrice: string;
+  maxPrice: string;
+  minTrades: string;
+}
+
 export default function TradersPage() {
   const [traders, setTraders] = useState<Trader[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'verified'>('all');
+  const [filters, setFilters] = useState<FilterState>({
+    search: '',
+    sortBy: 'followers',
+    verified: null,
+    styles: [],
+    minPrice: '',
+    maxPrice: '',
+    minTrades: '',
+  });
 
   useEffect(() => {
     fetchTraders();
-  }, [filter]);
+  }, [filters]);
 
   const fetchTraders = async () => {
     setLoading(true);
     try {
-      const url = filter === 'verified' 
-        ? '/api/traders?verified=true' 
-        : '/api/traders';
+      // Build query parameters
+      const params = new URLSearchParams();
+      
+      if (filters.search) params.append('search', filters.search);
+      if (filters.sortBy) params.append('sortBy', filters.sortBy);
+      if (filters.verified !== null) params.append('verified', String(filters.verified));
+      if (filters.styles.length > 0) params.append('style', filters.styles[0]); // For simplicity, use first style
+      if (filters.minPrice) params.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+      if (filters.minTrades) params.append('minTrades', filters.minTrades);
+      
+      const url = `/api/traders${params.toString() ? `?${params.toString()}` : ''}`;
       
       const response = await fetch(url);
       if (response.ok) {
@@ -74,7 +105,12 @@ export default function TradersPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold">Top Traders</h1>
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Discover Top Traders</h1>
+            <p className="text-muted-foreground">
+              Find and follow the best traders. {traders.length} trader{traders.length !== 1 ? 's' : ''} found.
+            </p>
+          </div>
           <Button asChild>
             <Link href="/become-trader">
               Become a Trader
@@ -82,20 +118,9 @@ export default function TradersPage() {
           </Button>
         </div>
         
-        {/* Filters */}
-        <div className="flex gap-4 mb-8">
-          <Button
-            onClick={() => setFilter('all')}
-            variant={filter === 'all' ? 'default' : 'outline'}
-          >
-            All Traders
-          </Button>
-          <Button
-            onClick={() => setFilter('verified')}
-            variant={filter === 'verified' ? 'default' : 'outline'}
-          >
-            Verified Only
-          </Button>
+        {/* Enhanced Discovery Filters */}
+        <div className="mb-8">
+          <TraderDiscoveryFilters onFilterChange={setFilters} />
         </div>
 
         {/* Trader Grid */}
@@ -113,15 +138,24 @@ export default function TradersPage() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <div className="text-6xl mb-4">📊</div>
-            <h3 className="text-2xl font-bold mb-2">No Traders Yet</h3>
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-2xl font-bold mb-2">No Traders Found</h3>
             <p className="text-muted-foreground mb-6">
-              Be the first to join and start earning from your trades!
+              Try adjusting your filters or search criteria.
             </p>
-            <Button asChild size="lg">
-              <Link href="/become-trader">
-                Become a Trader
-              </Link>
+            <Button 
+              onClick={() => setFilters({
+                search: '',
+                sortBy: 'followers',
+                verified: null,
+                styles: [],
+                minPrice: '',
+                maxPrice: '',
+                minTrades: '',
+              })}
+              variant="outline"
+            >
+              Clear All Filters
             </Button>
           </div>
         )}
