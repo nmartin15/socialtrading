@@ -2,26 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { tradeSubmissionSchema } from '@/lib/validations/trade';
 import { copyTradeToSubscribers, notifyCopiers } from '@/lib/copyTradeService';
+import { requireAuth } from '@/lib/auth';
+import { sanitizeText, sanitizeTxHash, sanitizeNumericString, sanitizeTokenSymbol } from '@/lib/sanitize';
+import { logger } from '@/lib/logger';
 import { z } from 'zod';
 
 // POST /api/trades - Submit a new trade
 export async function POST(request: NextRequest) {
   try {
+    // 🔒 Require authentication
+    const walletAddress = await requireAuth(request);
+    
     const body = await request.json();
 
-    // Get wallet address from header (set by middleware)
-    // For testing without wallet connection, use dummy address
-    const walletAddress = request.headers.get('x-wallet-address') || '0x1234567890123456789012345678901234567890';
-    
-    if (!walletAddress) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Please connect your wallet.' },
-        { status: 401 }
-      );
-    }
+    // 🛡️ Sanitize inputs before validation
+    const sanitizedBody = {
+      ...body,
+      tokenIn: sanitizeTokenSymbol(body.tokenIn),
+      tokenOut: sanitizeTokenSymbol(body.tokenOut),
+      amountIn: sanitizeNumericString(body.amountIn),
+      amountOut: sanitizeNumericString(body.amountOut),
+      txHash: sanitizeTxHash(body.txHash),
+      notes: sanitizeText(body.notes, 5000),
+    };
 
     // Validate input
-    const validatedData = tradeSubmissionSchema.parse(body);
+    const validatedData = tradeSubmissionSchema.parse(sanitizedBody);
 
     // Check if user exists and is a trader (always use lowercase for consistency)
     const user = await prisma.user.findUnique({
@@ -87,21 +93,18 @@ export async function POST(request: NextRequest) {
     
     // Run copy trading in the background (don't await to avoid slowing down response)
     copyTradeToSubscribers(trade).then((result) => {
-      console.log(`Trade ${trade.id} copy results:`, result);
+      logger.info('Trade copy results', { tradeId: trade.id, ...result });
       if (result.copiedCount > 0) {
-        console.log(`✅ Successfully copied trade to ${result.copiedCount} copiers`);
-      }
-      if (result.skippedCount > 0) {
-        console.log(`⏭️  Skipped ${result.skippedCount} copiers`);
+        logger.info('Successfully copied trade', { tradeId: trade.id, copiedCount: result.copiedCount });
       }
       if (result.errors.length > 0) {
-        console.error(`❌ Errors during copy:`, result.errors);
+        logger.error('Errors during copy', { tradeId: trade.id, errors: result.errors });
       }
     });
 
     // 🔔 Notify all copiers about the new trade
     notifyCopiers(user.trader.id, tradeMessage).catch((error) => {
-      console.error('Error notifying copiers:', error);
+      logger.error('Error notifying copiers', { traderId: user.trader.id, error });
     });
 
     return NextResponse.json(
@@ -112,6 +115,15 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    // Handle authentication errors
+    if (error instanceof Error && error.message.includes('Authentication required')) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 401 }
+      );
+    }
+    
+    // Handle validation errors
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation failed', details: error.issues },
@@ -119,7 +131,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Error submitting trade:', error);
+    logger.error('Error submitting trade', { error });
     return NextResponse.json(
       { error: 'Failed to submit trade. Please try again.' },
       { status: 500 }
@@ -173,7 +185,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching trades:', error);
+    logger.error('Error fetching trades', { error });
     return NextResponse.json(
       { error: 'Failed to fetch trades' },
       { status: 500 }
